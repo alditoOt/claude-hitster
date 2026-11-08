@@ -97,7 +97,7 @@
     display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px;
     font-weight: 800; font-size: 1.15rem; margin-bottom: 14px; border: 2px solid; text-shadow: 0 0 8px currentColor;
   }
-  .neon { filter: drop-shadow(0 0 3px currentColor); flex: none; }
+  .neon { overflow: visible; filter: drop-shadow(0 0 3px currentColor); flex: none; }
   .answer { display: flex; align-items: center; gap: 12px; justify-content: center; border: 2px solid; border-radius: 14px; padding: 10px 14px; margin-top: 14px; text-align: left; }
   .answer .lbl { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; opacity: .85; }
   .answer .sub { font-size: .95rem; font-weight: 700; opacity: .9; }
@@ -463,16 +463,24 @@ const getCats = mode => mode === 'mixed'
 
 /* neon icons, drawn in a 44x44 box centred on 0,0; colour comes from CSS `color` */
 const ICONS = {
-  singer: '<circle cx="-13" cy="-12" r="4"/><path d="M-13 -8V4M-13 4l-4 11M-13 4l4 11M-13 -4l7 -3"/><circle cx="-4" cy="-8" r="1.6"/>'
-        + '<circle cx="14" cy="-12" r="4"/><path d="M14 -8V3M14 3l-3 12M14 3l4 12"/><ellipse cx="7" cy="5" rx="4.5" ry="3.2" transform="rotate(-35 7 5)"/><path d="M10 2.5L20 -6"/>',
+  // guitarist (left) + singer with mic (right), each standing on a little disc
+  singer: '<circle cx="-9" cy="-16" r="3.6"/><path d="M-14 -10Q-9 -12.5 -4 -10L-5 3H-13Z"/><path d="M-11.5 3V14M-6.5 3V14"/>'
+        + '<ellipse cx="-9" cy="-1" rx="5.2" ry="3.4" transform="rotate(-28 -9 -1)"/><path d="M-5 -4L3 -10"/><ellipse cx="-9" cy="15.5" rx="7.5" ry="2"/>'
+        + '<circle cx="11" cy="-10" r="3.6"/><path d="M6 -4Q11 -6.5 16 -4L15 8H7Z"/><path d="M9 8V17M13 8V17"/>'
+        + '<path d="M16 -3Q20.5 -5 17.5 -10"/><circle cx="16.5" cy="-11.5" r="1.4" fill="currentColor"/><ellipse cx="11" cy="18.5" rx="7.5" ry="2"/>',
   y2000:  '<text y="-3" text-anchor="middle" font-size="17" font-weight="800" fill="currentColor" stroke="none">20</text><text y="15" text-anchor="middle" font-size="17" font-weight="800" fill="currentColor" stroke="none">00</text>',
   n4:     '<text y="12" text-anchor="middle" font-size="34" font-weight="800" fill="currentColor" stroke="none">4</text>',
   n2:     '<text y="12" text-anchor="middle" font-size="34" font-weight="800" fill="currentColor" stroke="none">2</text>',
   n3:     '<text y="12" text-anchor="middle" font-size="34" font-weight="800" fill="currentColor" stroke="none">3</text>',
   zeros:  '<text y="9" text-anchor="middle" font-size="25" font-weight="800" fill="currentColor" stroke="none">0\'s</text>',
-  notes:  '<ellipse cx="-14" cy="12" rx="3.4" ry="2.5" fill="currentColor"/><path d="M-10.6 12V-6"/><ellipse cx="0" cy="5" rx="3.4" ry="2.5" fill="currentColor"/><path d="M3.4 5V-13"/><ellipse cx="14" cy="14" rx="3.4" ry="2.5" fill="currentColor"/><path d="M17.4 14V-2"/>',
+  // beamed pair of eighth notes + a bigger single note with a flag
+  notes:  '<ellipse cx="-14.5" cy="10" rx="4" ry="3" transform="rotate(-20 -14.5 10)"/><ellipse cx="-4.5" cy="12" rx="4" ry="3" transform="rotate(-20 -4.5 12)"/>'
+        + '<path d="M-10.8 9V-6M-0.8 11V-8M-10.8 -6L-0.8 -8V-3L-10.8 -1Z"/>'
+        + '<ellipse cx="7" cy="14" rx="5" ry="3.6" transform="rotate(-20 7 14)"/><path d="M11.8 12.5V-18C11.8 -10 20 -10 18 0"/>',
   cd:     '<circle r="16"/><circle r="5"/><path d="M-11 -9A14 14 0 0 1 -3 -14" opacity=".6"/>',
-  mic:    '<rect x="-5" y="-17" width="10" height="17" rx="5"/><path d="M-10 -4a10 10 0 0 0 20 0M0 6v8M-6 14h12M9 12q9 3 6 9"/>',
+  // handheld karaoke mic: round grille head, angled handle, bit of cable
+  mic:    '<g transform="translate(-3 -3)"><circle cx="-5" cy="-8" r="7.5"/><path d="M-12 -8H2M-8.5 -14.5Q-5 -11 -1.5 -14.5M-8.5 -1.5Q-5 -5 -1.5 -1.5"/>'
+        + '<rect x="-3" y="0" width="6" height="19" rx="3" transform="translate(0 -2) rotate(-42)"/><path d="M12 12q6 3 3 9"/></g>',
 };
 const iconInner = name => ICONS[name] || '';
 const iconSvg = (name, size, color) =>
