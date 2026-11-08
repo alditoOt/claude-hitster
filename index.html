@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hitster Spinner</title>
+<style>
+  :root {
+    --bg: #14101f;
+    --bg2: #1d1730;
+    --card: #231b3a;
+    --line: #382d57;
+    --text: #f4f0ff;
+    --muted: #a89fc4;
+    --accent: #ff4d8d;
+    --good: #3ddc97;
+    --bad: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh;
+    background: radial-gradient(1200px 700px at 50% -10%, #3a1f66 0%, var(--bg) 60%);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  a { color: var(--accent); }
+  [hidden] { display: none !important; }
+
+  .wrap { max-width: 760px; margin: 0 auto; padding: 16px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0 12px; }
+  header h1 { font-size: 1.25rem; margin: 0; letter-spacing: .02em; }
+  header h1 span { color: var(--accent); }
+  .chip {
+    font-size: .78rem; padding: 5px 10px; border-radius: 999px;
+    background: var(--bg2); border: 1px solid var(--line); color: var(--muted);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .chip.ok::before { background: var(--good); }
+  .chip.bad::before { background: var(--bad); }
+  .chip.wait::before { background: #ffb703; }
+  .head-right { display: flex; gap: 8px; align-items: center; }
+  .link-btn { background: none; border: 0; color: var(--muted); text-decoration: underline; font-size: .8rem; padding: 4px; }
+
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+
+  /* setup */
+  #setup h2 { margin-top: 0; }
+  #setup ol { padding-left: 1.2rem; line-height: 1.6; color: var(--muted); }
+  #setup ol b, #setup ol code { color: var(--text); }
+  code { background: var(--bg2); padding: 2px 6px; border-radius: 6px; word-break: break-all; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  input[type=text] {
+    flex: 1; min-width: 220px; padding: 11px 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--bg2); color: var(--text); font: inherit;
+  }
+  .btn {
+    background: var(--accent); border: 0; border-radius: 12px; padding: 11px 18px; font-weight: 700;
+    color: #fff;
+  }
+  .btn.ghost { background: var(--bg2); border: 1px solid var(--line); color: var(--text); font-weight: 600; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .note { color: var(--muted); font-size: .85rem; }
+
+  /* controls */
+  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: var(--bg2); padding: 5px; border-radius: 14px; border: 1px solid var(--line); }
+  .tab { background: none; border: 0; padding: 9px 4px; border-radius: 10px; color: var(--muted); font-weight: 600; font-size: .9rem; }
+  .tab[aria-selected=true] { background: var(--card); color: var(--text); box-shadow: 0 0 0 1px var(--line) inset; }
+  .tab:disabled { opacity: .5; cursor: not-allowed; }
+  .settings { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; margin: 12px 2px 0; font-size: .88rem; color: var(--muted); }
+  .settings label { display: inline-flex; gap: 8px; align-items: center; }
+  select { background: var(--bg2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font: inherit; }
+  input[type=range] { accent-color: var(--accent); }
+  .settings output { color: var(--text); font-weight: 700; min-width: 2.2em; display: inline-block; }
+
+  /* wheel */
+  .wheel-box { position: relative; width: min(86vw, 400px, 50vh); margin: 18px auto 6px; aspect-ratio: 1; }
+  .wheel-box svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  #wheel { transition: transform 4.2s cubic-bezier(.12,.62,.08,1); transform-box: fill-box; transform-origin: center; }
+  .wheel-box svg.pointer { width: 34px; height: 30px; }
+  .pointer { position: absolute; left: 50%; top: -12px; transform: translateX(-50%); z-index: 3; filter: drop-shadow(0 3px 4px rgba(0,0,0,.5)); }
+  .hub {
+    position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%);
+    width: 26%; aspect-ratio: 1; border-radius: 50%; border: 4px solid #fff; z-index: 2;
+    background: var(--accent); font-weight: 800; letter-spacing: .06em; font-size: clamp(.8rem, 3.4vw, 1.1rem);
+    color: #fff; box-shadow: 0 6px 20px rgba(0,0,0,.45);
+  }
+  .hub:disabled { background: #6b5f8f; cursor: default; }
+  .hub:not(:disabled):hover { filter: brightness(1.1); }
+
+  /* stage */
+  .stage { margin-top: 14px; min-height: 190px; text-align: center; }
+  .cat-banner {
+    display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px;
+    font-weight: 800; font-size: 1.15rem; margin-bottom: 14px; border: 2px solid; text-shadow: 0 0 8px currentColor;
+  }
+  .neon { filter: drop-shadow(0 0 3px currentColor); flex: none; }
+  .answer { display: flex; align-items: center; gap: 12px; justify-content: center; border: 2px solid; border-radius: 14px; padding: 10px 14px; margin-top: 14px; text-align: left; }
+  .answer .lbl { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; opacity: .85; }
+  .answer .sub { font-size: .95rem; font-weight: 700; opacity: .9; }
+  .answer .sub:empty { display: none; }
+  .answer .val { font-size: 1.35rem; font-weight: 800; text-shadow: 0 0 10px currentColor; }
+  .hint { color: var(--muted); }
+  .error { color: var(--bad); margin: 10px 0 0; }
+
+  .timer { position: relative; width: 150px; height: 150px; margin: 4px auto 8px; }
+  .timer svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .timer .bg { stroke: var(--line); }
+  .timer .fg { stroke: var(--accent); stroke-linecap: round; }
+  .timer .num { position: absolute; inset: 0; display: grid; place-items: center; font-size: 2.6rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .eq { display: inline-flex; gap: 4px; align-items: flex-end; height: 22px; margin-bottom: 8px; }
+  .eq i { width: 5px; background: var(--accent); border-radius: 2px; animation: eq 0.9s ease-in-out infinite; }
+  .eq i:nth-child(2) { animation-delay: .15s; } .eq i:nth-child(3) { animation-delay: .3s; } .eq i:nth-child(4) { animation-delay: .45s; } .eq i:nth-child(5) { animation-delay: .6s; }
+  @keyframes eq { 0%,100% { height: 4px; } 50% { height: 22px; } }
+
+  .reveal { display: grid; grid-template-columns: 150px 1fr; gap: 16px; align-items: center; text-align: left; }
+  .art { width: 150px; height: 150px; border-radius: 12px; background: var(--bg2) center/cover; display: grid; place-items: center; font-size: 3rem; box-shadow: 0 8px 24px rgba(0,0,0,.45); }
+  .reveal .year { font-size: 3.2rem; font-weight: 900; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .reveal .title { font-size: 1.35rem; font-weight: 800; margin: 8px 0 2px; }
+  .reveal .artist { color: var(--muted); font-size: 1.05rem; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; justify-content: center; }
+  @media (max-width: 520px) {
+    .reveal { grid-template-columns: 1fr; text-align: center; justify-items: center; }
+    .tab { font-size: .78rem; }
+  }
+  @media (prefers-reduced-motion: reduce) { #wheel { transition-duration: .01s; } .eq i { animation: none; height: 14px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Hitster <span>Spinner</span></h1>
+    <div class="head-right">
+      <span class="chip" id="status">Not connected</span>
+      <button class="link-btn" id="logout" hidden>Log out</button>
+    </div>
+  </header>
+
+  <!-- SETUP -->
+  <section id="setup" class="panel" hidden>
+    <h2>Connect Spotify</h2>
+    <ol>
+      <li>Open the <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">Spotify Developer Dashboard</a> and create an app (needs the app owner to have <b>Spotify Premium</b>). Tick <b>Web API</b> and <b>Web Playback SDK</b>.</li>
+      <li>Add this exact Redirect URI to the app: <code id="redirect"></code>
+        <button class="link-btn" id="copyRedirect">copy</button></li>
+      <li>Paste the app's <b>Client ID</b> below. Add everyone who will log in under <b>User management</b> (max 5 in development mode).</li>
+    </ol>
+    <div class="row">
+      <input type="text" id="clientId" placeholder="Client ID" autocomplete="off" spellcheck="false">
+      <button class="btn" id="connect">Log in with Spotify</button>
+    </div>
+    <p class="error" id="setupError" hidden></p>
+    <p class="note">The person who logs in needs Premium too, because the browser plays the full song through Spotify. No server is involved; your login stays in this browser.</p>
+    <p class="note">Just want to look around? <button class="link-btn" id="demoBtn">Try demo mode</button> (silent, 8 built-in songs).</p>
+  </section>
+
+  <!-- GAME -->
+  <section id="game" hidden>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div class="settings">
+      <label>Clip length <input type="range" id="seconds" min="5" max="60" step="5"> <output id="secondsOut"></output>s</label>
+      <label>Start at
+        <select id="startMode">
+          <option value="mid">a point in the song</option>
+          <option value="start">the beginning</option>
+        </select>
+      </label>
+      <label>Songs from <select id="pool"></select></label>
+    </div>
+
+    <div class="wheel-box">
+      <svg class="pointer" width="34" height="30" viewBox="0 0 34 30" aria-hidden="true"><path d="M17 30 L2 2 H32 Z" fill="#fff"/></svg>
+      <svg viewBox="-104 -104 208 208" aria-hidden="true"><g id="wheel"></g></svg>
+      <button class="hub" id="spin" disabled>SPIN</button>
+    </div>
+
+    <div class="stage" id="stage">
+      <div id="stIdle" class="hint">Press <b>SPIN</b> (or the space bar) to pick a challenge.</div>
+      <div id="stCat" hidden><span class="cat-banner" id="catBanner"></span></div>
+      <div id="stLoading" class="hint" hidden>Finding a song…</div>
+      <div id="stPlaying" hidden>
+        <div class="eq"><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="timer">
+          <svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="44" fill="none" stroke-width="7"/><circle class="fg" id="ring" cx="50" cy="50" r="44" fill="none" stroke-width="7"/></svg>
+          <div class="num" id="timerNum">15</div>
+        </div>
+        <div class="actions"><button class="btn ghost" id="revealNow">Reveal now</button></div>
+      </div>
+      <div id="stReveal" hidden>
+        <div class="reveal">
+          <div class="art" id="art"></div>
+          <div>
+            <div class="year" id="rYear"></div>
+            <div class="title" id="rTitle"></div>
+            <div class="artist" id="rArtist"></div>
+          </div>
+        </div>
+        <div class="answer" id="rAnswer"></div>
+        <div class="actions">
+          <button class="btn ghost" id="replay">Replay clip</button>
+          <button class="btn" id="again">Spin again</button>
+        </div>
+        <p class="note" id="rNote"></p>
+      </div>
+      <p class="error" id="error" hidden></p>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG — the board challenges and the song pools live here.
+
+   Each challenge: name (full text), short (wheel label), color (neon),
+   icon (see ICONS below) and answer(track) -> what to show as the answer.
+
+   Song pools are Spotify search queries. Useful filters:
+     year:1980-1989      genre:rock      genre:"hip hop"
+   `offset` = [min, max] how deep into the search results to dig:
+     low numbers = well-known songs, high numbers = deeper cuts.
+   ============================================================ */
+const NEON = { green: '#39ff88', pink: '#ff3ea5', yellow: '#ffe600', purple: '#b44dff', blue: '#2ec4ff' };
+const decadeOf = t => Math.floor(Number(t.year) / 10) * 10 + 's';
+// returns [main answer, small line underneath]
+const within = n => t => [`${Number(t.year) - n} – ${Number(t.year) + n}`, `Exact year: ${t.year}`];
+
+const CONFIG = {
+  clientIdFromFile: '',          // optional: paste your Client ID here instead of in the UI
+  defaultSeconds: 15,
+  offset: [0, 150],
+  boards: {
+    easy: {
+      label: 'Easy board',
+      categories: [
+        { name: 'Group or solo artist', short: 'Group or solo?', color: NEON.green,  icon: 'singer',  answer: t => t.artist },
+        { name: 'Before 2000?',         short: 'Before 2000?',   color: NEON.pink,   icon: 'y2000',   answer: t => (Number(t.year) < 2000 ? 'Yes, before 2000' : 'No, 2000 or later') },
+        { name: '4 years up or down',   short: '± 4 years',      color: NEON.yellow, icon: 'n4',      answer: within(4) },
+        { name: 'Decade',               short: 'Decade',         color: NEON.purple, icon: 'zeros',   answer: decadeOf },
+        { name: '2 years up or down',   short: '± 2 years',      color: NEON.blue,   icon: 'n2',      answer: within(2) },
+      ],
+    },
+    hard: {
+      label: 'Hard board',
+      categories: [
+        { name: 'Song title',           short: 'Song title',     color: NEON.green,  icon: 'notes',   answer: t => t.title },
+        { name: 'Exact year',           short: 'Exact year',     color: NEON.pink,   icon: 'cd',      answer: t => t.year },
+        { name: 'Group or singer name', short: 'Artist name',    color: NEON.yellow, icon: 'mic',     answer: t => t.artist },
+        { name: 'Decade',               short: 'Decade',         color: NEON.purple, icon: 'zeros',   answer: decadeOf },
+        { name: '3 years up or down',   short: '± 3 years',      color: NEON.blue,   icon: 'n3',      answer: within(3) },
+      ],
+    },
+  },
+  // "Songs from" choices. q = null means a random year between randomYears.
+  pools: [
+    { id: 'any',     label: 'Any song (random year)', q: null },
+    { id: 'pop',     label: 'Pop',        q: 'genre:pop' },
+    { id: 'rock',    label: 'Rock',       q: 'genre:rock' },
+    { id: 'hiphop',  label: 'Hip-Hop',    q: 'genre:"hip hop"' },
+    { id: 'rnb',     label: 'R&B',        q: 'genre:"r&b"' },
+    { id: 'dance',   label: 'Dance',      q: 'genre:dance' },
+    { id: 'latin',   label: 'Latin',      q: 'genre:latin' },
+    { id: 'country', label: 'Country',    q: 'genre:country' },
+    { id: 'disco',   label: 'Disco',      q: 'genre:disco' },
+    { id: 'metal',   label: 'Metal',      q: 'genre:metal' },
+    { id: '60s',     label: 'The 60s',    q: 'year:1960-1969' },
+    { id: '70s',     label: 'The 70s',    q: 'year:1970-1979' },
+    { id: '80s',     label: 'The 80s',    q: 'year:1980-1989' },
+    { id: '90s',     label: 'The 90s',    q: 'year:1990-1999' },
+    { id: '2000s',   label: 'The 2000s',  q: 'year:2000-2009' },
+    { id: '2010s',   label: 'The 2010s',  q: 'year:2010-2019' },
+    { id: '2020s',   label: 'The 2020s',  q: 'year:2020-2029' },
+  ],
+  randomYears: [1960, new Date().getFullYear()],
+  // results whose title/album match this are skipped (karaoke, tributes, covers…)
+  skipPattern: /karaoke|tribute|instrumental|originally performed|made famous|cover version|lullaby/i,
+};
+
+/* ---------------- helpers ---------------- */
+const $ = s => document.querySelector(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const rand = n => Math.floor(Math.random() * n);
+const randBetween = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const LS = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  del(k) { try { localStorage.removeItem(k); } catch {} },
+};
+const REDIRECT = location.origin + location.pathname.replace(/index\.html$/, '');
+const SCOPES = 'streaming user-read-email user-read-private user-modify-playback-state user-read-playback-state';
+
+function setStatus(text, kind = '') {
+  const el = $('#status'); el.textContent = text; el.className = 'chip ' + kind;
+}
+function showError(msg) {
+  const el = $('#error'); el.textContent = msg; el.hidden = !msg;
+}
+
+/* ---------------- Spotify auth (PKCE, no server) ---------------- */
+const b64url = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+async function startLogin(clientId) {
+  const verifier = b64url(crypto.getRandomValues(new Uint8Array(64)));
+  const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+  const state = b64url(crypto.getRandomValues(new Uint8Array(12)));
+  LS.set('hs_client_id', clientId); LS.set('hs_verifier', verifier); LS.set('hs_state', state);
+  location.href = 'https://accounts.spotify.com/authorize?' + new URLSearchParams({
+    client_id: clientId, response_type: 'code', redirect_uri: REDIRECT, scope: SCOPES,
+    code_challenge_method: 'S256', code_challenge: challenge, state,
+  });
+}
+
+async function tokenRequest(params) {
+  const r = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ client_id: LS.get('hs_client_id'), ...params }),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error_description || j.error || 'Login failed');
+  LS.set('hs_access', j.access_token);
+  if (j.refresh_token) LS.set('hs_refresh', j.refresh_token);
+  LS.set('hs_expires', String(Date.now() + (j.expires_in - 60) * 1000));
+}
+
+async function handleCallback(params) {
+  const code = params.get('code'), err = params.get('error');
+  history.replaceState(null, '', REDIRECT);
+  if (err) throw new Error('Spotify said: ' + err);
+  if (params.get('state') !== LS.get('hs_state')) throw new Error('Login state mismatch, please try again.');
+  await tokenRequest({ grant_type: 'authorization_code', code, redirect_uri: REDIRECT, code_verifier: LS.get('hs_verifier') });
+  LS.del('hs_verifier'); LS.del('hs_state');
+}
+
+async function getToken() {
+  if (Date.now() > Number(LS.get('hs_expires') || 0)) {
+    const refresh = LS.get('hs_refresh');
+    if (!refresh) throw new Error('Session expired, please log in again.');
+    await tokenRequest({ grant_type: 'refresh_token', refresh_token: refresh });
+  }
+  return LS.get('hs_access');
+}
+
+async function api(path, opts = {}) {
+  const token = await getToken();
+  const r = await fetch('https://api.spotify.com/v1' + path, {
+    ...opts, headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+  });
+  if (r.status === 429) throw new Error('Spotify is rate-limiting us. Wait a few seconds and spin again.');
+  if (r.status === 204) return null;
+  const j = await r.json().catch(() => null);
+  if (!r.ok) { const e = new Error(j?.error?.message || ('Spotify error ' + r.status)); e.status = r.status; throw e; }
+  return j;
+}
+
+/* ---------------- engines: Spotify (real) and demo (silent) ---------------- */
+function buildQuery(pool) {
+  return pool.q || 'year:' + randBetween(...CONFIG.randomYears);
+}
+function toTrack(it) {
+  return {
+    id: it.id, uri: it.uri, title: it.name, artist: it.artists.map(a => a.name).join(', '),
+    year: (it.album.release_date || '').slice(0, 4), art: it.album.images?.[0]?.url || '',
+    duration: it.duration_ms, link: it.external_urls?.spotify || '', albumName: it.album.name,
+  };
+}
+const played = new Set();
+
+const spotifyEngine = {
+  name: 'spotify', deviceId: null, player: null,
+
+  async init() {
+    setStatus('Connecting player…', 'wait');
+    await getToken();
+    await new Promise((resolve, reject) => {
+      window.onSpotifyWebPlaybackSDKReady = () => {
+        const p = this.player = new Spotify.Player({
+          name: 'Hitster Spinner', volume: 0.8,
+          getOAuthToken: cb => getToken().then(cb).catch(e => reject(e)),
+        });
+        p.addListener('ready', ({ device_id }) => { this.deviceId = device_id; setStatus('Spotify player ready', 'ok'); resolve(); });
+        p.addListener('not_ready', () => setStatus('Player offline', 'bad'));
+        p.addListener('initialization_error', e => reject(new Error('Browser not supported: ' + e.message)));
+        p.addListener('authentication_error', e => reject(new Error('Auth problem: ' + e.message + '. Try logging out and in again.')));
+        p.addListener('account_error', () => reject(new Error('This Spotify account needs Premium to play music in the browser.')));
+        p.connect().then(ok => { if (!ok) reject(new Error('Could not connect the Spotify player.')); });
+      };
+      const s = document.createElement('script');
+      s.src = 'https://sdk.scdn.co/spotify-player.js'; s.onerror = () => reject(new Error('Could not load the Spotify player script.'));
+      document.head.appendChild(s);
+    });
+  },
+
+  async prepare() { if (this.player?.activateElement) await this.player.activateElement(); },
+
+  async pickTrack(pool) {
+    const [lo, hi] = CONFIG.offset;
+    let offset = randBetween(lo, hi);
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const q = buildQuery(pool);
+      const qs = new URLSearchParams({ q, type: 'track', limit: '10', offset: String(offset), market: 'from_token' });
+      let data;
+      try { data = await api('/search?' + qs); }
+      catch (e) {
+        if (e.status === 400) { qs.delete('market'); data = await api('/search?' + qs); } else throw e;
+      }
+      const ok = (data?.tracks?.items || []).filter(it =>
+        it && it.is_playable !== false && it.album?.album_type !== 'compilation' &&
+        !played.has(it.id) && !CONFIG.skipPattern.test(it.name + ' ' + it.album?.name));
+      if (ok.length) { const t = toTrack(ok[rand(ok.length)]); played.add(t.id); return t; }
+      offset = Math.floor(offset / 2);   // pool too shallow or all played: dig less deep and retry
+    }
+    throw new Error('Could not find a song in that pool. Spin again!');
+  },
+
+  async play(track, startMs) {
+    const body = JSON.stringify({ uris: [track.uri], position_ms: startMs });
+    for (let i = 0; i < 4; i++) {
+      try { await api('/me/player/play?device_id=' + this.deviceId, { method: 'PUT', body }); break; }
+      catch (e) { if (i === 3 || (e.status !== 404 && e.status !== 502)) throw e; await sleep(700); }
+    }
+    // wait until audio is really playing, so the countdown doesn't include buffering time
+    for (let i = 0; i < 60; i++) {
+      const s = await this.player.getCurrentState();
+      if (s && !s.paused && s.track_window.current_track.id === track.id) return;
+      await sleep(150);
+    }
+    throw new Error('Playback did not start. Check that Spotify is not playing elsewhere and try again.');
+  },
+
+  async pause() { try { await this.player.pause(); } catch {} },
+};
+
+const DEMO_TRACKS = [
+  ['Bohemian Rhapsody', 'Queen', '1975'], ['Dancing Queen', 'ABBA', '1976'], ['Billie Jean', 'Michael Jackson', '1982'],
+  ['Smells Like Teen Spirit', 'Nirvana', '1991'], ['...Baby One More Time', 'Britney Spears', '1998'],
+  ['Lose Yourself', 'Eminem', '2002'], ['Hey Ya!', 'OutKast', '2003'], ['Rolling in the Deep', 'Adele', '2010'],
+].map(([title, artist, year], i) => ({ id: 'demo' + i, title, artist, year, art: '', duration: 200000, link: '' }));
+
+const demoEngine = {
+  name: 'demo',
+  async init() { setStatus('Demo mode (silent)', 'wait'); },
+  async prepare() {},
+  async pickTrack() {
+    const pool = DEMO_TRACKS.filter(t => !played.has(t.id));
+    const list = pool.length ? pool : (played.clear(), DEMO_TRACKS);
+    const t = list[rand(list.length)]; played.add(t.id); return t;
+  },
+  async play() { await sleep(400); },
+  async pause() {},
+};
+
+/* ---------------- game ---------------- */
+const game = {
+  engine: null, mode: 'easy', pool: 'any', rotation: 0, busy: false, current: null, skip: null,
+  seconds: CONFIG.defaultSeconds, startMode: 'mid',
+};
+
+const getCats = mode => mode === 'mixed'
+  ? [...CONFIG.boards.easy.categories, ...CONFIG.boards.hard.categories]
+  : CONFIG.boards[mode].categories;
+
+/* neon icons, drawn in a 44x44 box centred on 0,0; colour comes from CSS `color` */
+const ICONS = {
+  singer: '<circle cx="-13" cy="-12" r="4"/><path d="M-13 -8V4M-13 4l-4 11M-13 4l4 11M-13 -4l7 -3"/><circle cx="-4" cy="-8" r="1.6"/>'
+        + '<circle cx="14" cy="-12" r="4"/><path d="M14 -8V3M14 3l-3 12M14 3l4 12"/><ellipse cx="7" cy="5" rx="4.5" ry="3.2" transform="rotate(-35 7 5)"/><path d="M10 2.5L20 -6"/>',
+  y2000:  '<text y="-3" text-anchor="middle" font-size="17" font-weight="800" fill="currentColor" stroke="none">20</text><text y="15" text-anchor="middle" font-size="17" font-weight="800" fill="currentColor" stroke="none">00</text>',
+  n4:     '<text y="12" text-anchor="middle" font-size="34" font-weight="800" fill="currentColor" stroke="none">4</text>',
+  n2:     '<text y="12" text-anchor="middle" font-size="34" font-weight="800" fill="currentColor" stroke="none">2</text>',
+  n3:     '<text y="12" text-anchor="middle" font-size="34" font-weight="800" fill="currentColor" stroke="none">3</text>',
+  zeros:  '<text y="9" text-anchor="middle" font-size="25" font-weight="800" fill="currentColor" stroke="none">0\'s</text>',
+  notes:  '<ellipse cx="-14" cy="12" rx="3.4" ry="2.5" fill="currentColor"/><path d="M-10.6 12V-6"/><ellipse cx="0" cy="5" rx="3.4" ry="2.5" fill="currentColor"/><path d="M3.4 5V-13"/><ellipse cx="14" cy="14" rx="3.4" ry="2.5" fill="currentColor"/><path d="M17.4 14V-2"/>',
+  cd:     '<circle r="16"/><circle r="5"/><path d="M-11 -9A14 14 0 0 1 -3 -14" opacity=".6"/>',
+  mic:    '<rect x="-5" y="-17" width="10" height="17" rx="5"/><path d="M-10 -4a10 10 0 0 0 20 0M0 6v8M-6 14h12M9 12q9 3 6 9"/>',
+};
+const iconInner = name => ICONS[name] || '';
+const iconSvg = (name, size, color) =>
+  `<svg class="neon" viewBox="-22 -22 44 44" width="${size}" height="${size}" style="color:${color}" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconInner(name)}</svg>`;
+
+function show(id) {
+  for (const s of ['stIdle', 'stCat', 'stLoading', 'stPlaying', 'stReveal']) {
+    if (s === id) $('#' + s).hidden = false;
+    else if (!(s === 'stCat' && id === 'stLoading') && !(s === 'stCat' && id === 'stPlaying')) $('#' + s).hidden = true;
+  }
+}
+
+function drawWheel() {
+  const cats = getCats(game.mode), n = cats.length, step = 360 / n, R = 100;
+  const pt = a => [R * Math.sin(a * Math.PI / 180), -R * Math.cos(a * Math.PI / 180)];
+  const big = n <= 6;
+  let html = '<defs><filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="1.8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>'
+    + `<circle r="${R}" fill="#120d1f"/>`;
+  cats.forEach((c, i) => {
+    const a0 = i * step, a1 = (i + 1) * step, mid = (a0 + a1) / 2;
+    const [x0, y0] = pt(a0), [x1, y1] = pt(a1);
+    html += `<path d="M0 0 L${x0.toFixed(2)} ${y0.toFixed(2)} A${R} ${R} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)} Z" fill="${c.color}" fill-opacity=".17" stroke="${c.color}" stroke-width="1.3" stroke-opacity=".9"/>`;
+    html += `<g transform="rotate(${mid}) translate(0 ${big ? -56 : -62}) scale(${big ? 0.95 : 0.6})" style="color:${c.color}" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)">${iconInner(c.icon)}</g>`;
+    html += `<text transform="rotate(${mid}) translate(0 -86)" text-anchor="middle" dominant-baseline="central" font-size="${big ? 6.2 : 5}" font-weight="700" fill="${c.color}">${c.short}</text>`;
+  });
+  html += `<circle r="${R}" fill="none" stroke="#ffffff" stroke-opacity=".85" stroke-width="2.2"/>`;
+  $('#wheel').innerHTML = html;
+}
+
+async function spinWheelTo(idx, n) {
+  const step = 360 / n;
+  const jitter = (Math.random() - 0.5) * step * 0.6;
+  const target = 360 - (idx + 0.5) * step + jitter;      // brings segment centre to the top
+  const base = game.rotation - (((game.rotation % 360) + 360) % 360);
+  game.rotation = base + 360 * 5 + target;
+  $('#wheel').style.transform = `rotate(${game.rotation}deg)`;
+  await sleep(matchMedia('(prefers-reduced-motion: reduce)').matches ? 50 : 4300);
+}
+
+function lockUI(locked) {
+  game.busy = locked;
+  $('#spin').disabled = locked;
+  document.querySelectorAll('.tab').forEach(t => t.disabled = locked);
+}
+
+function computeStart(track) {
+  const clipMs = game.seconds * 1000;
+  if (game.startMode === 'start' || !track.duration || track.duration < clipMs + 40000) return 0;
+  const lo = track.duration * 0.15, hi = Math.min(track.duration * 0.55, track.duration - clipMs - 5000);
+  return hi > lo ? Math.floor(lo + Math.random() * (hi - lo)) : 0;
+}
+
+async function spin() {
+  if (game.busy) return;
+  lockUI(true); showError('');
+  try {
+    await game.engine.prepare();
+    const cats = getCats(game.mode);
+    const idx = rand(cats.length), cat = cats[idx];
+    const pool = CONFIG.pools.find(p => p.id === game.pool) || CONFIG.pools[0];
+    show('stLoading'); $('#stCat').hidden = true; $('#stLoading').textContent = 'Spinning…';
+    const pending = game.engine.pickTrack(pool);
+    pending.catch(() => {});                       // avoid unhandled-rejection noise; awaited below
+    await spinWheelTo(idx, cats.length);
+    const b = $('#catBanner');
+    b.innerHTML = iconSvg(cat.icon, 30, cat.color) + `<span>${cat.name}</span>`;
+    b.style.cssText = `color:${cat.color};border-color:${cat.color};background:${cat.color}24;box-shadow:0 0 18px ${cat.color}66, inset 0 0 12px ${cat.color}33`;
+    show('stLoading'); $('#stCat').hidden = false; $('#stLoading').textContent = 'Finding a song…';
+    const track = await pending;
+    game.current = { track, cat };
+    await sleep(600);
+    await playClip();
+  } catch (e) {
+    show('stIdle'); showError(e.message || String(e));
+  } finally { lockUI(false); }
+}
+
+async function playClip() {
+  const { track } = game.current;
+  $('#stLoading').textContent = 'Get ready…'; show('stLoading');
+  $('#stCat').hidden = false;
+  await game.engine.play(track, computeStart(track));
+  show('stPlaying');
+  await countdown(game.seconds);
+  await game.engine.pause();
+  reveal();
+}
+
+function countdown(sec) {
+  const ring = $('#ring'), num = $('#timerNum'), C = 2 * Math.PI * 44;
+  ring.style.strokeDasharray = C;
+  return new Promise(resolve => {
+    const t0 = performance.now(); let raf;
+    game.skip = () => { cancelAnimationFrame(raf); game.skip = null; resolve(); };
+    const tick = now => {
+      const left = Math.max(0, sec - (now - t0) / 1000);
+      ring.style.strokeDashoffset = C * (1 - left / sec);
+      num.textContent = Math.ceil(left);
+      if (left <= 0) { game.skip = null; resolve(); } else raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+  });
+}
+
+function reveal() {
+  const { track, cat } = game.current;
+  $('#rYear').textContent = track.year || '?';
+  $('#rTitle').textContent = track.title;
+  $('#rArtist').textContent = track.artist;
+  const art = $('#art');
+  art.style.backgroundImage = track.art ? `url("${track.art}")` : '';
+  art.textContent = track.art ? '' : '🎵';
+  let ans = '', sub = ''; try { [ans, sub = ''] = [].concat(cat.answer(track)).map(String); } catch {}
+  if (/NaN|undefined/.test(ans)) ans = '?';
+  if (/NaN|undefined/.test(sub)) sub = '';
+  const box = $('#rAnswer');
+  box.innerHTML = iconSvg(cat.icon, 34, cat.color) + `<div><div class="lbl">${cat.name}</div><div class="val"></div><div class="sub"></div></div>`;
+  box.querySelector('.val').textContent = ans;
+  box.querySelector('.sub').textContent = sub;
+  box.style.cssText = `color:${cat.color};border-color:${cat.color};background:${cat.color}1c;box-shadow:0 0 16px ${cat.color}55`;
+  $('#rNote').innerHTML = track.link ? `<a href="${track.link}" target="_blank" rel="noopener">Open in Spotify</a> · year is the release year of the album Spotify lists, so re-releases can differ from the original` : '';
+  show('stReveal'); $('#stCat').hidden = false;
+}
+
+async function replay() {
+  if (game.busy) return;
+  lockUI(true); showError('');
+  try { await game.engine.prepare(); await playClip(); }
+  catch (e) { reveal(); showError(e.message); }
+  finally { lockUI(false); }
+}
+
+function buildTabs() {
+  const tabs = $('#tabs');
+  const list = [...Object.entries(CONFIG.boards).map(([k, b]) => [k, b.label]), ['mixed', 'Mixed (all 10)']];
+  tabs.innerHTML = list.map(([k, label]) =>
+    `<button class="tab" role="tab" data-mode="${k}" aria-selected="${k === game.mode}">${label}</button>`).join('');
+  tabs.onclick = e => {
+    const b = e.target.closest('.tab'); if (!b || game.busy) return;
+    game.mode = b.dataset.mode; LS.set('hs_mode', game.mode);
+    tabs.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t === b));
+    drawWheel(); $('#wheel').style.transition = 'none'; $('#wheel').style.transform = 'rotate(0deg)';
+    game.rotation = 0; requestAnimationFrame(() => requestAnimationFrame(() => $('#wheel').style.transition = ''));
+    show('stIdle'); showError('');
+  };
+}
+
+async function startGame(engine) {
+  game.engine = engine;
+  $('#setup').hidden = true; $('#game').hidden = false;
+  const savedMode = LS.get('hs_mode'); if (savedMode && (CONFIG.boards[savedMode] || savedMode === 'mixed')) game.mode = savedMode;
+  const poolSel = $('#pool');
+  poolSel.innerHTML = CONFIG.pools.map(p => `<option value="${p.id}">${p.label}</option>`).join('');
+  const savedPool = LS.get('hs_pool'); if (CONFIG.pools.some(p => p.id === savedPool)) game.pool = savedPool;
+  poolSel.value = game.pool;
+  game.seconds = Number(LS.get('hs_seconds')) || CONFIG.defaultSeconds;
+  game.startMode = LS.get('hs_start') || 'mid';
+  $('#seconds').value = game.seconds; $('#secondsOut').textContent = game.seconds; $('#startMode').value = game.startMode;
+  buildTabs(); drawWheel(); show('stIdle');
+  try {
+    await engine.init();
+    $('#spin').disabled = false;
+    $('#logout').hidden = engine.name !== 'spotify';
+  } catch (e) {
+    setStatus('Problem', 'bad'); showError(e.message || String(e));
+    $('#logout').hidden = engine.name !== 'spotify';
+  }
+}
+
+/* ---------------- wire up + boot ---------------- */
+$('#spin').onclick = spin;
+$('#again').onclick = spin;
+$('#replay').onclick = replay;
+$('#revealNow').onclick = () => game.skip && game.skip();
+$('#seconds').oninput = e => { game.seconds = Number(e.target.value); $('#secondsOut').textContent = game.seconds; LS.set('hs_seconds', game.seconds); };
+$('#pool').onchange = e => { game.pool = e.target.value; LS.set('hs_pool', game.pool); };
+$('#startMode').onchange =e => { game.startMode = e.target.value; LS.set('hs_start', game.startMode); };
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && !game.busy && !$('#game').hidden && !/INPUT|SELECT|BUTTON/.test(document.activeElement.tagName)) { e.preventDefault(); spin(); }
+});
+$('#logout').onclick = () => { ['hs_access', 'hs_refresh', 'hs_expires'].forEach(LS.del); location.href = REDIRECT; };
+$('#copyRedirect').onclick = () => navigator.clipboard?.writeText(REDIRECT);
+$('#demoBtn').onclick = () => startGame(demoEngine);
+$('#connect').onclick = () => {
+  const id = $('#clientId').value.trim();
+  const err = $('#setupError'); err.hidden = true;
+  if (!/^[0-9a-f]{32}$/i.test(id)) { err.textContent = 'That doesn\'t look like a Client ID (32 letters/numbers).'; err.hidden = false; return; }
+  startLogin(id);
+};
+
+async function boot() {
+  if (location.hostname === 'localhost') { location.replace(location.href.replace('//localhost', '//127.0.0.1')); return; }
+  $('#redirect').textContent = REDIRECT;
+  $('#clientId').value = CONFIG.clientIdFromFile || LS.get('hs_client_id') || '';
+  const params = new URLSearchParams(location.search);
+  if (params.has('code') || params.has('error')) {
+    try { await handleCallback(params); }
+    catch (e) { $('#setup').hidden = false; $('#setupError').textContent = e.message; $('#setupError').hidden = false; return; }
+  }
+  if (params.has('demo')) return startGame(demoEngine);
+  if (LS.get('hs_refresh') || LS.get('hs_access')) return startGame(spotifyEngine);
+  $('#setup').hidden = false;
+}
+boot();
+</script>
+</body>
+</html>
