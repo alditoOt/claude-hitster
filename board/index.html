@@ -76,7 +76,13 @@ const notesEl = document.getElementById('notes');
 let state = load() || fresh();
 
 function fresh() {
-  return { colors: Array.from({ length: 25 }, () => NEON[Math.floor(Math.random() * NEON.length)]), marks: Array(25).fill(false), notes: '' };
+  // 25 squares / 5 colors = exactly 5 of each, shuffled (Fisher-Yates)
+  const colors = NEON.flatMap(c => Array(5).fill(c));
+  for (let i = colors.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [colors[i], colors[j]] = [colors[j], colors[i]];
+  }
+  return { colors, marks: Array(25).fill(false), notes: '' };
 }
 function load() { try { const s = JSON.parse(localStorage.getItem(KEY)); return s && s.colors && s.colors.length === 25 ? s : null; } catch { return null; } }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} }
